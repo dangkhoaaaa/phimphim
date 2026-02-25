@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -21,6 +21,7 @@ const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
 
 export default function MovieDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = params.slug as string;
   const dispatch = useAppDispatch();
   const { currentMovie, loading } = useAppSelector((state) => state.movies);
@@ -28,6 +29,9 @@ export default function MovieDetailPage() {
   const [selectedEpisode, setSelectedEpisode] = useState<ServerData | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
   const [watchHistory, setWatchHistory] = useState<any>(null);
+  const [hasReachedPreviewLimit, setHasReachedPreviewLimit] = useState(false);
+  const [showPreviewLimitPopup, setShowPreviewLimitPopup] = useState(false);
+  const lastReportedSecondRef = useRef<number>(0);
 
   useEffect(() => {
     if (slug) {
@@ -87,6 +91,9 @@ export default function MovieDetailPage() {
   const handlePlayEpisode = async (episode: ServerData) => {
     setSelectedEpisode(episode);
     setShowPlayer(true);
+    setHasReachedPreviewLimit(false);
+    setShowPreviewLimitPopup(false);
+    lastReportedSecondRef.current = 0;
     
     // Save watch history if authenticated
     if (authService.isAuthenticated() && currentMovie) {
@@ -229,8 +236,8 @@ export default function MovieDetailPage() {
               </div>
             )}
 
-            {/* Player */}
-            {false && selectedEpisode && (
+            {/* Player with 10-second preview limit */}
+            {showPlayer && selectedEpisode && (
               <div className="bg-netflix-dark rounded-lg p-4 mb-4">
                 <div className="aspect-video bg-black rounded-lg overflow-hidden">
                   {selectedEpisode.link_m3u8 ? (
@@ -239,15 +246,28 @@ export default function MovieDetailPage() {
                       controls
                       width="100%"
                       height="100%"
-                      playing
+                      playing={!hasReachedPreviewLimit}
                       onProgress={async (state) => {
-                        // Auto-update watch history every 30 seconds
-                        if (authService.isAuthenticated() && currentMovie && state.playedSeconds > 0) {
+                        if (!hasReachedPreviewLimit && state.playedSeconds >= 10) {
+                          setHasReachedPreviewLimit(true);
+                          setShowPreviewLimitPopup(true);
+                          return;
+                        }
+
+                        // Auto-update watch history every 30 seconds (within preview window)
+                        if (
+                          authService.isAuthenticated() &&
+                          currentMovie &&
+                          state.playedSeconds > 0 &&
+                          !hasReachedPreviewLimit
+                        ) {
                           const playedSeconds = Math.floor(state.playedSeconds);
-                          const totalSeconds = state.loadedSeconds ? Math.floor(state.loadedSeconds) : 0;
-                          
+
                           // Only update every 30 seconds to avoid too many API calls
-                          if (playedSeconds % 30 === 0) {
+                          if (playedSeconds - lastReportedSecondRef.current >= 30) {
+                            lastReportedSecondRef.current = playedSeconds;
+                            const totalSeconds = state.loadedSeconds ? Math.floor(state.loadedSeconds) : 0;
+
                             try {
                               await watchHistoryService.createOrUpdate({
                                 contentType: 'movie',
@@ -269,11 +289,23 @@ export default function MovieDetailPage() {
                       }}
                     />
                   ) : selectedEpisode.link_embed ? (
-                    <iframe
-                      src={selectedEpisode.link_embed}
-                      className="w-full h-full"
-                      allowFullScreen
-                    />
+                    <>
+                      {!hasReachedPreviewLimit ? (
+                        <iframe
+                          src={selectedEpisode.link_embed}
+                          className="w-full h-full"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-black text-white text-center p-4">
+                          <p>
+                            Bạn đã hết thời gian xem thử 10 giây cho phim này.
+                            <br />
+                            Your 10-second preview time for this movie has ended.
+                          </p>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="flex items-center justify-center h-full text-white">
                       Không có link phát
@@ -390,6 +422,31 @@ export default function MovieDetailPage() {
         {/* Comments Section */}
         <CommentsSection contentType="movie" contentId={currentMovie._id || slug} />
       </div>
+      {showPreviewLimitPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 text-black">
+            <h2 className="text-lg font-bold mb-3 text-center">
+              Giới hạn xem thử / Preview Limit
+            </h2>
+            <p className="text-sm mb-4 text-center">
+              Bạn chỉ có thể xem thử mỗi phim trong tối đa 10 giây. Trình phát đã tự động dừng để
+              tôn trọng bản quyền nội dung.
+              <br />
+              You can only preview each movie for up to 10 seconds. The player has automatically
+              stopped to respect the content copyright.
+            </p>
+            <button
+              onClick={() => {
+                setShowPreviewLimitPopup(false);
+                router.push('/');
+              }}
+              className="mt-2 w-full bg-netflix-red text-white font-semibold py-2 px-4 rounded hover:bg-netflix-red/90 transition-colors"
+            >
+              Đã hiểu / I Understand
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
