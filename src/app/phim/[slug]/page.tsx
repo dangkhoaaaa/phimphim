@@ -60,7 +60,7 @@ export default function MovieDetailPage() {
 
   useEffect(() => {
     if (currentMovie) {
-      // Tự động chọn server đầu tiên
+      // Automatically select the first server by default
       const firstEpisode = currentMovie.episodes?.[0];
       if (firstEpisode && firstEpisode.server_data.length > 0) {
         setSelectedServer(firstEpisode.server_name);

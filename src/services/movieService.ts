@@ -45,7 +45,7 @@ const transformCollectionResponse = (
 };
 
 export const movieService = {
-  // Lấy danh sách phim mới cập nhật
+  // Fetch the latest updated movies
   getLatestMovies: async (page: number = 1, version: 'v1' | 'v2' | 'v3' = 'v3'): Promise<MovieListResponse> => {
     const endpoint = version === 'v1' 
       ? `/danh-sach/phim-moi-cap-nhat?page=${page}`
@@ -55,7 +55,7 @@ export const movieService = {
     return response.data;
   },
 
-  // Lấy thông tin chi tiết phim
+  // Fetch movie detail information
   getMovieDetail: async (slug: string): Promise<MovieDetail> => {
     const response = await api.get<MovieDetailResponse>(`/phim/${slug}`);
     
@@ -70,13 +70,13 @@ export const movieService = {
     throw new Error('Failed to fetch movie detail');
   },
 
-  // Lấy thông tin phim theo TMDB ID
+  // Fetch movie information by TMDB ID
   getMovieByTMDB: async (type: 'tv' | 'movie', id: number): Promise<MovieDetail> => {
     const response = await api.get<MovieDetail>(`/tmdb/${type}/${id}`);
     return response.data;
   },
 
-  // Tổng hợp danh sách phim
+  // Aggregate movie list
   getMovieList: async (
     typeList: string,
     params: SearchParams = {}
@@ -99,7 +99,7 @@ export const movieService = {
     return transformCollectionResponse(response.data, params);
   },
 
-  // Tìm kiếm phim
+  // Search movies
   searchMovies: async (params: SearchParams): Promise<MovieListResponse> => {
     try {
       const queryParams = new URLSearchParams();
@@ -151,13 +151,13 @@ export const movieService = {
     }
   },
 
-  // Lấy danh sách thể loại
+  // Get category list
   getCategories: async (): Promise<FilterOption[]> => {
     const response = await api.get<FilterOption[]>('/the-loai');
     return response.data;
   },
 
-  // Lấy phim theo thể loại
+  // Get movies by category
   getMoviesByCategory: async (
     categorySlug: string,
     params: SearchParams = {}
@@ -179,13 +179,13 @@ export const movieService = {
     return transformCollectionResponse(response.data, params);
   },
 
-  // Lấy danh sách quốc gia
+  // Get country list
   getCountries: async (): Promise<FilterOption[]> => {
     const response = await api.get<FilterOption[]>('/quoc-gia');
     return response.data;
   },
 
-  // Lấy phim theo quốc gia
+  // Get movies by country
   getMoviesByCountry: async (
     countrySlug: string,
     params: SearchParams = {}
@@ -207,7 +207,7 @@ export const movieService = {
     return transformCollectionResponse(response.data, params);
   },
 
-  // Lấy phim theo năm
+  // Get movies by year
   getMoviesByYear: async (
     year: number,
     params: SearchParams = {}
@@ -229,7 +229,7 @@ export const movieService = {
     return transformCollectionResponse(response.data, params);
   },
 
-  // Chuyển đổi ảnh sang WEBP
+  // Convert image to WEBP
   convertImageToWebP: (imageUrl: string): string => {
     return `https://phimapi.com/image.php?url=${encodeURIComponent(imageUrl)}`;
   },

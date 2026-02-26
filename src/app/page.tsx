@@ -24,7 +24,7 @@ export default function HomePage() {
     );
   }
 
-  // Chia danh sách phim thành các nhóm để hiển thị
+  // Split movie list into groups for display
   const heroMovies = latestMovies.slice(0, 5);
   const trendingMovies = latestMovies.slice(5, 15);
   const newMovies = latestMovies.slice(15, 25);

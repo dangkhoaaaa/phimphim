@@ -7,7 +7,7 @@ import axios from 'axios';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Gọi API ping để kích hoạt render khi người dùng vào web lần đầu
+    // Call ping API to warm up the backend on the first visit
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
     const pingApi = async () => {
       try {
